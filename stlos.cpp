@@ -44,3 +44,135 @@ RAII 对象：
 构造时获得资源
 析构时释放资源
 */
+/*
+1. 内存管理与操作系统
+堆与栈：C++程序的内存管理涉及操作系统的堆和栈。栈内存由操作系统自动管理，而堆内存通常由程序员通过new和delete来管理。操作系统通过提供系统调用（如malloc、free）来实现堆内存的分配与回收，C++的new和delete是对这些系统调用的封装。
+虚拟内存：操作系统使用虚拟内存来为每个进程提供独立的地址空间。在C++中，程序员访问的是虚拟地址空间，操作系统会将这些地址映射到物理内存或硬盘上的交换文件中。
+内存泄漏与操作系统：C++中的内存泄漏问题，即通过new分配的内存没有被delete释放，导致无法回收的内存。操作系统本身并不直接管控内存泄漏，但它提供的垃圾回收机制（如内存分页、虚拟内存管理）在某些程度上能减轻这种问题。
+
+*/
+#include <iostream>
+
+int main() {
+    // 在堆上分配内存
+    int* ptr = new int(42);  // 动态分配
+    
+    std::cout << "Heap allocated value: " << *ptr << std::endl;
+
+    // 释放内存
+    delete ptr;
+    
+    return 0;
+}
+/*
+2. 系统调用
+在C++中，使用标准库或直接调用操作系统的系统调用接口来进行文件操作，系统调用进行文件读写。
+*/
+#include <iostream>
+#include <fcntl.h>  // open()
+#include <unistd.h> // read(), write(), close()
+
+int main() {
+    // 打开文件
+    int fd = open("example.txt", O_CREAT | O_RDWR, 0644);
+    if (fd == -1) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    // 向文件写入数据
+    const char* text = "Hello, OS!";
+    if (write(fd, text, 12) == -1) {
+        perror("Error writing to file");
+        close(fd);
+        return 1;
+    }
+
+    // 重新定位文件指针到文件开头
+    lseek(fd, 0, SEEK_SET);
+
+    // 从文件读取数据
+    char buffer[13];
+    if (read(fd, buffer, 12) == -1) {
+        perror("Error reading from file");
+        close(fd);
+        return 1;
+    }
+    buffer[12] = '\0'; // 确保字符串结束
+
+    std::cout << "Read from file: " << buffer << std::endl;
+
+    // 关闭文件
+    close(fd);
+
+    return 0;
+}
+/*
+3.多线程操作：<thread>库创建多线程，并与操作系统进行交互
+*/
+#include <iostream>
+#include <thread>
+#include <chrono>
+
+void task1() {
+    std::this_thread::sleep_for(std::chrono::seconds(2));  // 模拟耗时任务
+    std::cout << "Task 1 completed." << std::endl;
+}
+
+void task2() {
+    std::this_thread::sleep_for(std::chrono::seconds(1));  // 模拟耗时任务
+    std::cout << "Task 2 completed." << std::endl;
+}
+
+int main() {
+    std::cout << "Starting tasks..." << std::endl;
+
+    // 创建两个线程并启动
+    std::thread t1(task1);
+    std::thread t2(task2);
+
+    // 等待两个线程执行完毕
+    t1.join();
+    t2.join();
+
+    std::cout << "All tasks completed." << std::endl;
+
+    return 0;
+}
+//5. 文件锁操作：使用文件锁来同步文件访问
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/file.h>  // flock()
+
+int main() {
+    int fd = open("lockfile.txt", O_CREAT | O_WRONLY, 0644);
+    if (fd == -1) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    // 对文件加锁，使用非阻塞锁
+    if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
+        perror("Error locking file");
+        close(fd);
+        return 1;
+    }
+
+    std::cout << "File locked successfully, performing operations..." << std::endl;
+
+    // 模拟文件操作
+    sleep(5);  // 等待5秒钟，模拟操作
+
+    // 解锁文件
+    if (flock(fd, LOCK_UN) == -1) {
+        perror("Error unlocking file");
+        close(fd);
+        return 1;
+    }
+
+    std::cout << "File unlocked." << std::endl;
+
+    close(fd);
+    return 0;
+}
