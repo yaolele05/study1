@@ -162,3 +162,9 @@ void run(const allline&pl)
     }
    }
 }
+//前台进程组 = 当前拥有终端控制权的进程组
+int main()
+{
+
+    return 0;
+}
