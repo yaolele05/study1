@@ -115,12 +115,13 @@ allline pline(const string &line)
 
     return pl;
 }
-void run(const allline& pl)
+void run( allline& pl)
 {
     int n = pl.cmds.size();
     if (n == 0) return;
 
     vector<vector<int>> pipes(n-1, vector<int>(2));
+   
     for (int i = 0; i < n-1; i++)
     {
         if (pipe(pipes[i].data()) == -1)
@@ -132,6 +133,12 @@ void run(const allline& pl)
 
     pid_t pgid = 0;
     vector<pid_t> pids;
+     bool is_bg= false;
+      if (!pl.cmds.empty() && pl.cmds.back().argv.back() == "&")
+       {
+        is_bg= true;
+        pl.cmds.back().argv.pop_back();  // 去掉 '&'
+    }
     for (int i = 0; i < n; i++)
     {
         pid_t pid = fork();
@@ -200,10 +207,6 @@ void run(const allline& pl)
             }
             argv.push_back(nullptr);  
 
-            cout << "Running command: " << argv[0] << endl;
-            for (int j = 0; j < pl.cmds[i].argv.size(); j++)
-                cout << "arg[" << j << "]: " << argv[j] << endl;
-
             execvp(argv[0], argv.data());  
             perror("execvp");  
             exit(1);
@@ -215,13 +218,11 @@ void run(const allline& pl)
                 pgid = pid;  // 第一个子进程作为进程组组长
             setpgid(pid, pgid);
             pids.push_back(pid);
-
-            // 关闭当前管道的写端（父进程不需要）
             if (i < n-1)
             {
-                close(pipes[i][1]);
+                close(pipes[i][1]);// 关闭当前写端
             }
-            // 关闭上一个管道的读端（父进程不需要）
+            // 关闭上一个管道的读端
             if (i > 0)
             {
                 close(pipes[i-1][0]);
@@ -230,6 +231,8 @@ void run(const allline& pl)
     }
 
     // 等待所有子进程结束
+    if(is_bg==false)
+    {
     tcsetpgrp(STDIN_FILENO, pgid);  // 交给子进程组控制终端
     int status;
     for (pid_t pid : pids)
@@ -237,6 +240,7 @@ void run(const allline& pl)
         waitpid(pid, &status, 0);
     }
     tcsetpgrp(STDIN_FILENO, getpgrp());  // 收回终端控制权
+   }
 }
 int main()
 { 
@@ -377,6 +381,7 @@ int main()
                 else
                 {
                     is_b = false;  // 不是内建命令    
+                    
                 }
             }
         }
