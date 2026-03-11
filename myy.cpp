@@ -270,6 +270,9 @@ void run( allline& pl)
     // 等待所有子进程结束
     if(is_bg==false)
     {
+     if (pgid != 0) {
+        tcsetpgrp(STDIN_FILENO, pgid);
+    }
     int status;
     for (pid_t pid : pids)
     {
