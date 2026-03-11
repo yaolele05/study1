@@ -178,13 +178,23 @@ void run(allline& pl)
             signal(SIGINT, SIG_DFL);
             signal(SIGTSTP, SIG_DFL);
             signal(SIGCHLD, SIG_DFL);
-            signal(SIGTTIN, SIG_DFL);
-            signal(SIGTTOU, SIG_DFL);
+            signal(SIGTTIN, SIG_IGN);
+            signal(SIGTTOU, SIG_IGN);
             signal(SIGQUIT, SIG_DFL);
             signal(SIGCONT, SIG_DFL);
 
-            // 修复3：赋予子进程终端控制权（关键！）
-            tcsetpgrp(STDIN_FILENO, pgid);
+         bool has_redirect = false;
+    // 检查是否有输入重定向（当前是第一个命令且设置了inf）
+    if (i == 0 && !pl.inf.empty()) has_redirect = true;
+    // 检查是否有输出重定向（当前是最后一个命令且设置了outf）
+    if (i == n-1 && !pl.outf.empty()) has_redirect = true;
+    // 检查是否是管道中间命令（天然有重定向）
+    if (i > 0 || i < n-1) has_redirect = true;
+
+    // 仅无重定向时，才设置终端控制权（嵌套shell需要）
+    if (!has_redirect) {
+        tcsetpgrp(STDIN_FILENO, pgid); // 保留，供嵌套shell使用
+    }
 
             // 原输入/输出重定向逻辑（不变）
             if (i == 0 && !pl.inf.empty()) {
@@ -199,6 +209,7 @@ void run(allline& pl)
                     0644);
                 if (fd == -1) { perror("open outf"); exit(1); }
                 dup2(fd, STDOUT_FILENO);
+                dup2(fd, STDERR_FILENO); // 错误输出也重定向
                 close(fd);
             }
 
@@ -251,6 +262,7 @@ void run(allline& pl)
         for (pid_t pid : pids) {
             waitpid(pid, &status, 0);
         }
+         usleep(1000); // 微秒级延迟，确保子进程完全退出
         tcsetpgrp(STDIN_FILENO, getpgrp()); // 恢复shell前台
     }
 }
