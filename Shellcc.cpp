@@ -379,7 +379,6 @@ int main()
                 if(is_b) continue;
             }
         }
-
         // 非内建
         if (is_b==false)
         {
