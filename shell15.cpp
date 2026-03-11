@@ -242,14 +242,14 @@ int main()
 { 
     const char* home_env = getenv("HOME");
     string home = home_env ? home_env : "/";
-    
+    chdir(home.c_str()); 
     setpgid(0, 0);
     tcsetpgrp(STDIN_FILENO, getpgrp());
     signal(SIGINT, SIG_IGN);
     signal(SIGTSTP, SIG_IGN);
 
     string line;
-    string oldpwd = getenv("HOME");  // 记录上一次的
+    string oldpwd = getenv("HOME");  // 记录上一次的cd -
 
     while (true)
     {
@@ -270,7 +270,7 @@ int main()
 
         // 解析命令
         allline pl = pline(line);
-        bool is_builtin = false;
+        bool is_b = false;
 
         // 处理内建命令
         if (pl.cmds.size() == 1)
@@ -278,7 +278,7 @@ int main()
             auto &cmd = pl.cmds[0].argv;
             if (cmd.empty() == false)
             {
-                is_builtin = true;
+                is_b = true;
                 int stdout_bak = dup(STDOUT_FILENO);
                 int stderr_bak = dup(STDERR_FILENO);
 
@@ -376,13 +376,13 @@ int main()
                 }
                 else
                 {
-                    is_builtin = false;  // 不是内建命令    
+                    is_b = false;  // 不是内建命令    
                 }
             }
         }
 
-        // 非内建命令，执行run
-        if (!is_builtin)
+        // 非内建
+        if (is_b==false)
         {
             run(pl);
         }
