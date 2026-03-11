@@ -41,21 +41,7 @@ vector<string> fen(const string &line)
             }
             continue;
         }
-        /*
-         if (c == '>' || c == '<' || c == '|') {
-            if (!cur.empty()) {
-                tokens.push_back(cur);
-                cur.clear();
-            }
-            cur.push_back(c);
-            if (c == '>' && !tokens.empty() && tokens.back() == ">") {
-                tokens.pop_back();
-                tokens.push_back(">>");
-                cur.clear();
-            }
-            continue;
-        }
-        */
+    
         // 普通字符
         cur.push_back(c);
     }
@@ -172,7 +158,9 @@ void run( allline& pl)
             // 子进程响应Ctrl+C
             signal(SIGINT, SIG_DFL);
             signal(SIGTSTP, SIG_DFL);
-
+        signal(SIGCHLD, SIG_DFL);  // 恢复子进程退出信号
+        signal(SIGTTIN, SIG_DFL);  // 恢复终端输入信号
+        signal(SIGTTOU, SIG_DFL);  // 恢复终端输出信号
             // 输入重定向
             if (i == 0 && !pl.inf.empty())
             {
